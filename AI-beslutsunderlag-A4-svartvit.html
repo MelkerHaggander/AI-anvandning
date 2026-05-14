@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<title>AI-beslutsunderlag — Claude & ChatGPT</title>
+<style>
+/* ============================================================
+   SVARTVIT A4-LAYOUT (monokrom utskrift)
+   - Inga färger används för informationsöverföring
+   - Zonidentitet via: symbol (✓/⚠/✗), ramtjocklek, kontrast
+   - Robust mot toner-besparing och låg utskriftskvalitet
+   ============================================================ */
+
+@page {
+    size: A4 portrait;
+    margin: 0;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+html, body {
+    background: #FFFFFF;
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #000000;
+    font-size: 9pt;
+    line-height: 1.35;
+}
+
+@media screen {
+    body {
+        background: #ECEFF1;
+        padding: 20px 0;
+    }
+    .page {
+        margin: 0 auto;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+    }
+}
+
+.page {
+    width: 210mm;
+    height: 297mm;
+    padding: 10mm;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    gap: 3mm;
+    overflow: hidden;
+}
+
+/* ============ HEADER ============ */
+.header {
+    background: #000000;
+    color: white;
+    padding: 5mm 6mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 18mm;
+    flex-shrink: 0;
+}
+
+.header-text h1 {
+    font-size: 18pt;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 1.5mm;
+}
+
+.header-text p {
+    font-size: 8.5pt;
+    color: #CFD8DC;
+    font-weight: 400;
+}
+
+.legend {
+    display: flex;
+    gap: 5mm;
+    font-size: 7.5pt;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 1.5mm;
+}
+
+.legend-symbol {
+    width: 4mm;
+    height: 4mm;
+    border-radius: 50%;
+    background: white;
+    color: black;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7pt;
+    font-weight: 900;
+    line-height: 1;
+}
+
+/* ============ ZONER (gemensamt) ============ */
+.zone {
+    background: white;
+    position: relative;
+}
+
+.zone-header-bar {
+    background: #000000;
+    color: white;
+    padding: 2.5mm 5mm;
+    display: flex;
+    align-items: center;
+    gap: 3.5mm;
+}
+
+.zone-symbol {
+    width: 7mm;
+    height: 7mm;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    flex-shrink: 0;
+    font-size: 11pt;
+    line-height: 1;
+}
+
+/* ✓ — vit cirkel, svart symbol (lågrisk = "öppen") */
+.use-zone .zone-symbol {
+    background: white;
+    color: black;
+    border: 1.5pt solid white;
+}
+
+/* ⚠ — vit cirkel med tjock svart kant (varning) */
+.check-zone .zone-symbol {
+    background: white;
+    color: black;
+    border: 1.5pt solid white;
+}
+
+/* ✗ — invers: svart cirkel med vit ring runtom (stoppsignal) */
+.avoid-zone .zone-symbol {
+    background: white;
+    color: black;
+    border: 1.5pt solid white;
+    box-shadow: 0 0 0 1.2pt black, 0 0 0 2.4pt white;
+}
+
+.zone-header-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.zone-title {
+    font-size: 10.5pt;
+    font-weight: 700;
+    letter-spacing: 0.3pt;
+}
+
+.zone-sub {
+    font-size: 7.8pt;
+    font-weight: 400;
+    color: #CFD8DC;
+    font-style: italic;
+    margin-top: 0.5mm;
+}
+
+.zone-body {
+    padding: 3.5mm 5mm 4mm 5mm;
+}
+
+/* Ramtjocklek signalerar risknivå */
+.use-zone   { border: 1pt solid #000000; }
+.check-zone { border: 2pt solid #000000; }
+.avoid-zone { border: 3pt double #000000; }
+
+/* ============ ZON 1: ANVÄND ============ */
+.use-zone {
+    height: 78mm;
+    flex-shrink: 0;
+}
+
+.cat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3.5mm 8mm;
+}
+
+.category-title {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #000000;
+    margin-bottom: 0.5mm;
+}
+
+.category-body {
+    font-size: 8pt;
+    line-height: 1.35;
+    color: #212121;
+}
+
+/* ============ ZON 2 + 3 (sida vid sida) ============ */
+.middle-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3mm;
+    height: 108mm;
+    flex-shrink: 0;
+}
+
+.check-zone, .avoid-zone {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.check-zone .zone-body, .avoid-zone .zone-body {
+    flex: 1;
+}
+
+.zone-body ul {
+    list-style: none;
+    padding: 0;
+}
+
+.zone-body li {
+    font-size: 8pt;
+    line-height: 1.4;
+    margin-bottom: 2.2mm;
+    padding-left: 4mm;
+    position: relative;
+}
+
+.zone-body li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 8pt;
+    color: #000;
+}
+
+.zone-body li b {
+    font-weight: 700;
+}
+
+/* ============ SNABBCHECK ============ */
+.checklist {
+    background: white;
+    border: 1.5pt solid #000000;
+    padding: 4mm 5mm;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.checklist h2 {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #000000;
+    margin-bottom: 3mm;
+    padding-bottom: 1.5mm;
+    border-bottom: 0.5pt solid #000000;
+    letter-spacing: 0.3pt;
+}
+
+.check-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3mm 8mm;
+    flex: 1;
+}
+
+.check-item {
+    font-size: 8.5pt;
+    line-height: 1.4;
+    padding-left: 6mm;
+    position: relative;
+}
+
+.check-item::before {
+    content: "☐";
+    position: absolute;
+    left: 0;
+    top: -0.2mm;
+    font-size: 11pt;
+    line-height: 1;
+}
+
+.check-item b {
+    font-weight: 700;
+}
+
+.check-item i {
+    color: #424242;
+    font-style: italic;
+}
+
+.footer-note {
+    text-align: center;
+    font-size: 7.8pt;
+    font-style: italic;
+    color: #424242;
+    margin-top: 2.5mm;
+    padding-top: 2mm;
+    border-top: 0.5pt dashed #9E9E9E;
+}
+
+@media print {
+    body { background: white; padding: 0; }
+    .page {
+        box-shadow: none;
+        margin: 0;
+        page-break-after: avoid;
+    }
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-text">
+            <h1>AI-beslutsunderlag</h1>
+            <p>Claude &amp; ChatGPT — snabbreferens. Använd före, inte efter, du skickar prompten.</p>
+        </div>
+        <div class="legend">
+            <div class="legend-item"><span class="legend-symbol">✓</span>ANVÄND</div>
+            <div class="legend-item"><span class="legend-symbol">⚠</span>KONTROLL</div>
+            <div class="legend-item"><span class="legend-symbol">✗</span>UNDVIK</div>
+        </div>
+    </header>
+
+    <!-- ZON 1: ANVÄND -->
+    <section class="zone use-zone">
+        <div class="zone-header-bar">
+            <div class="zone-symbol">✓</div>
+            <div class="zone-header-text">
+                <div class="zone-title">ANVÄND DIREKT</div>
+                <div class="zone-sub">Låg risk. AI är typiskt bättre och snabbare än att göra själv från noll.</div>
+            </div>
+        </div>
+        <div class="zone-body">
+            <div class="cat-grid">
+                <div>
+                    <div class="category-title">1. Text &amp; språk</div>
+                    <div class="category-body">Förstaversionsutkast • Omformulering &amp; ton • Korrektur • Översättning • Sammanfattning av eget material</div>
+                </div>
+                <div>
+                    <div class="category-title">4. Kod &amp; teknik</div>
+                    <div class="category-body">Boilerplate &amp; refaktorering • Förklara främmande kod • Regex • Konvertera dataformat • Debugging-hjälp</div>
+                </div>
+                <div>
+                    <div class="category-title">2. Analys &amp; syntes</div>
+                    <div class="category-body">Strukturera röriga anteckningar • Extrahera nyckelpunkter • Tematisera kvalitativa svar • Bygga jämförelsetabeller</div>
+                </div>
+                <div>
+                    <div class="category-title">5. Lärande &amp; förklaring</div>
+                    <div class="category-body">Förklara koncept på olika nivåer • Generera övningsfrågor • Jämföra teorier • "Förklara som om jag är X"</div>
+                </div>
+                <div>
+                    <div class="category-title">3. Idé &amp; strukturering</div>
+                    <div class="category-body">Brainstorm av vinklar/namn/hypoteser • Skapa ramverk, mallar, checklistor • Dispositioner &amp; planer</div>
+                </div>
+                <div>
+                    <div class="category-title">6. Beslutsstöd &amp; bollplank</div>
+                    <div class="category-body">Tradeoff-analys • Devil's advocate • Perspektivskifte • Riskinventering • Formulera motargument mot egen idé</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ZON 2 + 3 -->
+    <div class="middle-row">
+        <section class="zone check-zone">
+            <div class="zone-header-bar">
+                <div class="zone-symbol">⚠</div>
+                <div class="zone-header-text">
+                    <div class="zone-title">ANVÄND MED KONTROLL</div>
+                    <div class="zone-sub">AI ger värde, men verifiera innan output används skarpt.</div>
+                </div>
+            </div>
+            <div class="zone-body">
+                <ul>
+                    <li><b>Faktapåståenden</b> med specifika siffror, datum eller namn — risk för hallucination.</li>
+                    <li><b>Kod som ska köras i produktion</b> — testa, granska säkerhet och beroenden.</li>
+                    <li><b>Juridik, medicin, ekonomi</b> — användbart för förståelse, ej slutgiltigt råd.</li>
+                    <li><b>Sammanfattning av kontrakt/utredningar</b> — nyanser försvinner; läs själv det kritiska.</li>
+                    <li><b>Citat och källor</b> — verifiera alltid att källan finns och säger det som påstås.</li>
+                    <li><b>Aktuella händelser</b> — kräver webbsök; utan verktyg är svaret föråldrat.</li>
+                    <li><b>Strategiska beslut</b> — bra som bollplank, men kontextfattigt utan din verklighet.</li>
+                    <li><b>Översättning av specialiserad text</b> (legal, medicinsk, teknisk) — låt fackperson granska.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="zone avoid-zone">
+            <div class="zone-header-bar">
+                <div class="zone-symbol">✗</div>
+                <div class="zone-header-text">
+                    <div class="zone-title">UNDVIK SOM HUVUDLÖSNING</div>
+                    <div class="zone-sub">Hög risk för fel, skada eller läckage. Använd annan metod eller specialverktyg.</div>
+                </div>
+            </div>
+            <div class="zone-body">
+                <ul>
+                    <li><b>Komplex matematik &amp; precis numerik</b> utan kodexekvering eller kalkylator.</li>
+                    <li><b>Realtidsdata</b> (priser, kurser, väder, nyheter) utan webbsök/API.</li>
+                    <li><b>Konfidentiell eller personuppgiftskänslig data</b> som inte får lämna organisationen.</li>
+                    <li><b>Bindande råd</b> inom juridik, medicin, finans — kräver licensierad rådgivare.</li>
+                    <li><b>Påståenden om namngivna personer</b> — privatliv, anklagelser, omdömen.</li>
+                    <li><b>Beslut där bara du har kontexten</b> — relationer, värderingar, lokal kännedom.</li>
+                    <li><b>Bedömningar som kräver fysisk närvaro</b> — diagnos, syn/lukt/smak, materialkvalitet.</li>
+                    <li><b>Kreativ röst där autenticitet är poängen</b> — personliga brev, ledarkommunikation.</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+
+    <!-- SNABBCHECK -->
+    <section class="checklist">
+        <h2>SNABBCHECK INNAN DU SKICKAR PROMPTEN</h2>
+        <div class="check-grid">
+            <div class="check-item"><b>1.</b> Verifierar en människa output innan det används skarpt? <i>Nej → flytta uppgiften till KONTROLL eller UNDVIK.</i></div>
+            <div class="check-item"><b>2.</b> Spelar exakt siffra, citat, datum eller källa någon roll? <i>Ja → dubbelkolla mot primärkälla.</i></div>
+            <div class="check-item"><b>3.</b> Får informationen lämna organisationen / är den personuppgiftskänslig? <i>Nej → använd inte publik AI.</i></div>
+            <div class="check-item"><b>4.</b> Kräver svaret information efter modellens cutoff eller realtid? <i>Ja → kräv webbsök eller använd annan källa.</i></div>
+        </div>
+        <div class="footer-note">Princip: AI accelererar tänkande och utkast — den ersätter inte verifiering, kontext eller ansvar.</div>
+    </section>
+
+</div>
+
+</body>
+</html>
